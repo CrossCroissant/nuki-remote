@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1115">
+<meta name="robots" content="noindex, nofollow">
+<title>Haustür</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%2334d399' d='M12 1a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2h-1V6a5 5 0 0 0-5-5Zm-3 5a3 3 0 0 1 6 0v3H9V6Z'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #f4f5f7; --card: #ffffff; --text: #14161a; --muted: #6b7280; --line: #e5e7eb;
+    --green: #059669; --green-soft: #d1fae5; --amber: #d97706; --amber-soft: #fef3c7;
+    --red: #dc2626; --red-soft: #fee2e2; --blue: #2563eb; --blue-soft: #dbeafe;
+    --key: #f1f2f4; --key-active: #e2e4e8; --shadow: 0 1px 2px rgba(0,0,0,.05), 0 8px 24px rgba(0,0,0,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1115; --card: #181b21; --text: #f3f4f6; --muted: #9ca3af; --line: #272b33;
+      --green: #34d399; --green-soft: rgba(52,211,153,.12); --amber: #fbbf24; --amber-soft: rgba(251,191,36,.12);
+      --red: #f87171; --red-soft: rgba(248,113,113,.12); --blue: #60a5fa; --blue-soft: rgba(96,165,250,.12);
+      --key: #22262e; --key-active: #2d323c; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); }
+  body { font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; min-height: 100dvh;
+         padding: max(16px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom)); }
+  main { max-width: 440px; margin: 0 auto; display: grid; gap: 14px; }
+  header { display: flex; align-items: center; justify-content: space-between; padding: 4px 2px; }
+  header h1 { font-size: 20px; margin: 0; letter-spacing: -.01em; }
+  .conn { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .dot.ok { background: var(--green); } .dot.err { background: var(--red); }
+  .card { background: var(--card); border-radius: 20px; padding: 20px; box-shadow: var(--shadow); }
+
+  .hero { display: grid; justify-items: center; text-align: center; gap: 10px; padding: 28px 20px 22px; }
+  .ring { width: 120px; height: 120px; border-radius: 50%; display: grid; place-items: center;
+          background: var(--key); color: var(--muted); transition: background .3s, color .3s; }
+  .ring svg { width: 56px; height: 56px; }
+  .ring.locked { background: var(--green-soft); color: var(--green); }
+  .ring.unlocked { background: var(--amber-soft); color: var(--amber); }
+  .ring.moving { background: var(--blue-soft); color: var(--blue); animation: pulse 1.2s ease-in-out infinite; }
+  .ring.error { background: var(--red-soft); color: var(--red); }
+  @keyframes pulse { 50% { transform: scale(.94); } }
+  .state { font-size: 26px; font-weight: 700; letter-spacing: -.02em; }
+  .sub { color: var(--muted); font-size: 14px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 6px; }
+  .chip { font-size: 13px; padding: 5px 10px; border-radius: 999px; background: var(--key); color: var(--muted); }
+  .chip.on { background: var(--green-soft); color: var(--green); }
+  .chip.off { background: var(--red-soft); color: var(--red); }
+  .chip.warn { background: var(--amber-soft); color: var(--amber); }
+
+  .panel h2 { font-size: 17px; margin: 0 0 4px; } .panel p { margin: 0; color: var(--muted); font-size: 14px; }
+  .notice { display: flex; gap: 14px; align-items: center; }
+  .notice .ic { flex: none; width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; }
+  .notice .ic svg { width: 24px; height: 24px; }
+  .notice.off .ic { background: var(--red-soft); color: var(--red); }
+  .notice.wait .ic { background: var(--amber-soft); color: var(--amber); }
+
+  .pin-dots { display: flex; justify-content: center; gap: 14px; margin: 18px 0 8px; }
+  .pin-dots span { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line); transition: .15s; }
+  .pin-dots span.f { background: var(--text); border-color: var(--text); }
+  .pin-dots.shake { animation: shake .35s; } .pin-dots.shake span.f { background: var(--red); border-color: var(--red); }
+  @keyframes shake { 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+  .pin-msg { text-align: center; min-height: 20px; font-size: 14px; color: var(--muted); }
+  .pin-msg.err { color: var(--red); }
+  .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+  .keypad button { height: 60px; border: 0; border-radius: 16px; background: var(--key); color: var(--text);
+                   font: 600 22px/1 inherit; cursor: pointer; transition: background .1s, transform .1s; }
+  .keypad button:active { background: var(--key-active); transform: scale(.97); }
+  .keypad button.fn { font-size: 15px; font-weight: 600; color: var(--muted); }
+  .keypad button.go { background: var(--text); color: var(--card); }
+  .keypad button:disabled { opacity: .4; }
+
+  .session-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .timer { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 22px; }
+  .bar { height: 6px; border-radius: 3px; background: var(--key); overflow: hidden; margin: 12px 0 18px; }
+  .bar i { display: block; height: 100%; background: var(--green); transition: width 1s linear; }
+  .actions { display: grid; gap: 10px; }
+  .hold { position: relative; overflow: hidden; height: 64px; border: 0; border-radius: 16px; cursor: pointer;
+          font: 700 17px/1 inherit; color: #fff; display: flex; align-items: center; justify-content: center; gap: 10px;
+          user-select: none; -webkit-user-select: none; touch-action: none; }
+  .hold svg { width: 22px; height: 22px; position: relative; } .hold span { position: relative; }
+  .hold.open { background: #b45309; } .hold.lng { background: #1d4ed8; }
+  .hold::before { content: ""; position: absolute; inset: 0; background: rgba(255,255,255,.22);
+                  transform: scaleX(0); transform-origin: left; }
+  .hold.holding::before { transform: scaleX(1); transition: transform 1.2s linear; }
+  .hold:disabled { opacity: .5; cursor: default; }
+  .hint { text-align: center; font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .ghost { width: 100%; margin-top: 14px; height: 46px; border-radius: 14px; border: 1px solid var(--line);
+           background: transparent; color: var(--text); font: 600 15px/1 inherit; cursor: pointer; }
+
+  .result { display: none; border-radius: 16px; padding: 14px 16px; font-size: 14px; }
+  .result.show { display: block; } .result b { display: block; font-size: 15px; margin-bottom: 6px; }
+  .result.ok { background: var(--green-soft); } .result.warn { background: var(--amber-soft); } .result.err { background: var(--red-soft); }
+  .result ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 3px; }
+
+  .log h2 { font-size: 15px; margin: 0 0 10px; }
+  .log ol { list-style: none; margin: 0; padding: 0; display: grid; }
+  .log li { display: grid; grid-template-columns: 52px 1fr; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); font-size: 13px; }
+  .log li:first-child { border-top: 0; }
+  .log time { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .log .empty { color: var(--muted); font-size: 13px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Haustür</h1>
+    <div class="conn"><span class="dot" id="conn-dot"></span><span id="conn-text">Verbinde …</span></div>
+  </header>
+
+  <section class="card hero">
+    <div class="ring" id="ring"></div>
+    <div class="state" id="state">–</div>
+    <div class="sub" id="sub">&nbsp;</div>
+    <div class="chips">
+      <span class="chip" id="chip-freigabe">Fernsteuerung –</span>
+      <span class="chip" id="chip-battery">Batterie –</span>
+      <span class="chip" id="chip-door" hidden></span>
+    </div>
+  </section>
+
+  <section class="card panel" id="p-off" hidden>
+    <div class="notice off">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg></div>
+      <div><h2>Fernsteuerung ausgeschaltet</h2><p>Die Tür kann im Moment nicht aus der Ferne geöffnet werden.</p></div>
+    </div>
+  </section>
+
+  <section class="card panel" id="p-locked" hidden>
+    <div class="notice wait">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+      <div><h2>PIN-Eingabe gesperrt</h2><p>Zu viele Fehlversuche. Wieder möglich in <b id="sperre-timer">–</b>.</p></div>
+    </div>
+  </section>
+
+  <section class="card panel" id="p-pin" hidden>
+    <h2>PIN eingeben</h2>
+    <p>Nach der Eingabe ist die Fernöffnung <span id="pin-minutes">15</span> Minuten freigegeben.</p>
+    <div class="pin-dots" id="pin-dots"></div>
+    <div class="pin-msg" id="pin-msg"></div>
+    <div class="keypad" id="keypad"></div>
+  </section>
+
+  <section class="card panel" id="p-session" hidden>
+    <div class="session-head">
+      <div><h2>Freigabe aktiv</h2><p>Endet automatisch</p></div>
+      <div class="timer" id="session-timer">--:--</div>
+    </div>
+    <div class="bar"><i id="session-bar" style="width:100%"></i></div>
+    <div class="actions">
+      <button class="hold open" data-aktion="unlock">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 7.5-2"/></svg>
+        <span>Tür öffnen</span>
+      </button>
+      <button class="hold lng" data-aktion="lock_n_go">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3"/><path d="M18 3v4h-4M6 21v-4h4"/></svg>
+        <span>Lock &amp; Go</span>
+      </button>
+    </div>
+    <div class="hint">Zum Auslösen gedrückt halten</div>
+    <button class="ghost" id="end-session">Freigabe jetzt beenden</button>
+  </section>
+
+  <section class="result" id="result"></section>
+
+  <section class="card log">
+    <h2>Verlauf (24 h)</h2>
+    <ol id="log"><li class="empty">Lädt …</li></ol>
+  </section>
+</main>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const PIN_MAX = 8;
+  const ICONS = {
+    locked: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>',
+    unlocked: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 7.5-2"/></svg>',
+    moving: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>',
+    error: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 8v5M12 16.5v.5"/><path d="M10.3 3.9 2.6 17.5A2 2 0 0 0 4.3 20.5h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>',
+  };
+  const LOCK_STATES = {
+    LOCKED: ["Verriegelt", "locked"], UNLOCKED: ["Entriegelt", "unlocked"], UNLATCHED: ["Geöffnet", "unlocked"],
+    UNLOCKED_LOCK_N_GO: ["Lock & Go läuft", "moving"], LOCKING: ["Verriegelt …", "moving"],
+    UNLOCKING: ["Entriegelt …", "moving"], UNLATCHING: ["Öffnet …", "moving"],
+    MOTOR_BLOCKED: ["Motor blockiert", "error"], UNCALIBRATED: ["Nicht kalibriert", "error"],
+    UNDEFINED: ["Unbekannt", "error"], UNAVAILABLE: ["Nicht erreichbar", "error"],
+  };
+  const FALLBACK = { locked: ["Verriegelt", "locked"], unlocked: ["Entriegelt", "unlocked"], open: ["Geöffnet", "unlocked"],
+    locking: ["Verriegelt …", "moving"], unlocking: ["Entriegelt …", "moving"], jammed: ["Blockiert", "error"],
+    unavailable: ["Nicht erreichbar", "error"] };
+  const DOOR = { DOOR_CLOSED: "Tür zu", DOOR_OPENED: "Tür offen", DOOR_STATE_UNKNOWN: "Tür unbekannt" };
+  const ACTIONS = { unlock: "Tür öffnen", lock_n_go: "Lock & Go" };
+
+  let status = null, statusAt = 0, pin = "", busy = false, maxPin = 4, pinMinutes = 15;
+
+  const fmt = (s) => { s = Math.max(0, Math.round(s)); return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`; };
+  const ago = (iso) => {
+    if (!iso) return "";
+    const m = Math.round((Date.now() - new Date(iso)) / 60000);
+    if (m < 1) return "gerade eben"; if (m < 60) return `vor ${m} Min.`;
+    const h = Math.floor(m / 60); return h < 24 ? `vor ${h} Std.` : new Date(iso).toLocaleDateString("de-DE");
+  };
+  const elapsed = () => (Date.now() - statusAt) / 1000;
+  const human = (v) => (v && !["unknown", "unavailable", "NONE"].includes(v)) ? v.replaceAll("_", " ").toLowerCase() : "";
+
+  async function api(path, body) {
+    const opts = body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {};
+    const r = await fetch(path, opts);
+    let data = {}; try { data = await r.json(); } catch {}
+    return { status: r.status, ...data };
+  }
+
+  function setConn(ok) {
+    $("conn-dot").className = "dot " + (ok ? "ok" : "err");
+    $("conn-text").textContent = ok ? "Verbunden" : "Keine Verbindung";
+  }
+
+  function renderHero(s) {
+    const [label, cls] = LOCK_STATES[s.lock_state] || FALLBACK[s.lock] || [s.lock_state || "–", "error"];
+    const ring = $("ring");
+    ring.className = "ring " + cls; ring.innerHTML = ICONS[cls];
+    $("state").textContent = label;
+    const parts = [];
+    const act = human(s.last_action); if (act) parts.push(`Zuletzt: ${act}`);
+    const who = human(s.last_user) || human(s.last_trigger); if (who) parts.push(who);
+    const when = ago(s.last_changed); if (when) parts.push(when);
+    $("sub").textContent = parts.join(" · ") || " ";
+
+    const cf = $("chip-freigabe");
+    cf.textContent = s.freigabe ? "Fernsteuerung EIN" : "Fernsteuerung AUS";
+    cf.className = "chip " + (s.freigabe ? "on" : "off");
+    const cb = $("chip-battery");
+    const pct = parseInt(s.battery, 10);
+    cb.textContent = isNaN(pct) ? "Batterie –" : `Batterie ${pct} %`;
+    cb.className = "chip" + (s.battery_critical || pct < 20 ? " warn" : "");
+    const cd = $("chip-door");
+    cd.hidden = !DOOR[s.door_state]; cd.textContent = DOOR[s.door_state] || "";
+  }
+
+  function renderPanels() {
+    if (!status) return;
+    const s = status, e = elapsed();
+    const sperre = s.sperre_rest - e, sitzung = s.sitzung_rest - e;
+    const mode = !s.freigabe ? "off" : sperre > 0 ? "locked" : sitzung > 0 ? "session" : "pin";
+    for (const m of ["off", "locked", "pin", "session"]) $("p-" + m).hidden = m !== mode;
+    if (mode === "locked") $("sperre-timer").textContent = fmt(sperre);
+    if (mode === "session") {
+      $("session-timer").textContent = fmt(sitzung);
+      $("session-bar").style.width = Math.min(100, (sitzung / (pinMinutes * 60)) * 100) + "%";
+    }
+    if (mode !== "pin" && pin) { pin = ""; renderPin(); }
+  }
+
+  async function loadStatus() {
+    try {
+      const s = await api("/api/status");
+      if (!s.ok) throw new Error(s.text);
+      status = s; statusAt = Date.now(); setConn(true);
+      if (s.sitzung_rest > pinMinutes * 60) pinMinutes = Math.ceil(s.sitzung_rest / 60);
+      renderHero(s); renderPanels();
+    } catch { setConn(false); }
+  }
+
+  async function loadLog() {
+    try {
+      const r = await api("/api/verlauf");
+      const ol = $("log"); ol.innerHTML = "";
+      if (!r.ok || !r.eintraege.length) { ol.innerHTML = '<li class="empty">Keine Einträge</li>'; return; }
+      for (const x of r.eintraege) {
+        const li = document.createElement("li");
+        const t = document.createElement("time");
+        const d = new Date(x.when);
+        t.textContent = d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+        t.title = d.toLocaleString("de-DE");
+        const m = document.createElement("span");
+        m.textContent = x.name === "Nuki Fernsteuerung" ? x.message : `${x.name || "Nuki"}: ${x.message}`;
+        li.append(t, m); ol.append(li);
+      }
+    } catch {}
+  }
+
+  // PIN-Eingabe
+  function renderPin(shake) {
+    const dots = $("pin-dots");
+    const n = Math.max(maxPin, pin.length);
+    dots.innerHTML = Array.from({ length: n }, (_, i) => `<span class="${i < pin.length ? "f" : ""}"></span>`).join("");
+    dots.classList.toggle("shake", !!shake);
+  }
+  function pinMsg(text, err) { const m = $("pin-msg"); m.textContent = text || ""; m.className = "pin-msg" + (err ? " err" : ""); }
+
+  function buildKeypad() {
+    const kp = $("keypad");
+    const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "del", "0", "ok"];
+    for (const k of keys) {
+      const b = document.createElement("button");
+      b.type = "button";
+      if (k === "del") { b.textContent = "Löschen"; b.className = "fn"; b.onclick = () => { pin = pin.slice(0, -1); renderPin(); }; }
+      else if (k === "ok") { b.textContent = "OK"; b.className = "go"; b.onclick = submitPin; }
+      else { b.textContent = k; b.onclick = () => { if (pin.length < PIN_MAX) { pin += k; pinMsg(""); renderPin(); } }; }
+      kp.append(b);
+    }
+    document.addEventListener("keydown", (ev) => {
+      if ($("p-pin").hidden) return;
+      if (/^[0-9]$/.test(ev.key) && pin.length < PIN_MAX) { pin += ev.key; pinMsg(""); renderPin(); }
+      else if (ev.key === "Backspace") { pin = pin.slice(0, -1); renderPin(); }
+      else if (ev.key === "Enter") submitPin();
+    });
+  }
+
+  async function submitPin() {
+    if (busy || !pin) return;
+    busy = true; pinMsg("Prüfe …");
+    const r = await api("/api/pin", { pin });
+    busy = false;
+    if (r.ok) { maxPin = pin.length; pin = ""; renderPin(); pinMsg(""); await loadStatus(); loadLog(); return; }
+    if (r.status === 401) {
+      pin = ""; renderPin(true); setTimeout(() => renderPin(), 400);
+      pinMsg(r.rest != null ? `Falsche PIN – noch ${r.rest} Versuch${r.rest == 1 ? "" : "e"}` : "Falsche PIN", true);
+    } else if (r.status === 429) { pinMsg("Bitte kurz warten …", true); }
+    else { pin = ""; renderPin(); pinMsg(r.text || "Fehler", true); }
+    await loadStatus(); loadLog();
+  }
+
+  // Gedrückt halten zum Auslösen
+  function setupHold(btn) {
+    let timer = null;
+    const cancel = () => { clearTimeout(timer); timer = null; btn.classList.remove("holding"); };
+    btn.addEventListener("pointerdown", (ev) => {
+      if (btn.disabled) return;
+      ev.preventDefault(); btn.setPointerCapture?.(ev.pointerId);
+      btn.classList.add("holding");
+      timer = setTimeout(() => { cancel(); runAction(btn.dataset.aktion); }, 1200);
+    });
+    ["pointerup", "pointercancel", "pointerleave"].forEach((t) => btn.addEventListener(t, cancel));
+    btn.addEventListener("contextmenu", (ev) => ev.preventDefault());
+  }
+
+  function showResult(kind, title, lines) {
+    const el = $("result");
+    el.className = `result show ${kind}`;
+    el.innerHTML = "";
+    const b = document.createElement("b"); b.textContent = title; el.append(b);
+    if (lines?.length) {
+      const ul = document.createElement("ul");
+      for (const l of lines) { const li = document.createElement("li"); li.textContent = l; ul.append(li); }
+      el.append(ul);
+    }
+    el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  async function runAction(aktion) {
+    if (busy) return;
+    busy = true;
+    const buttons = document.querySelectorAll(".hold");
+    buttons.forEach((b) => (b.disabled = true));
+    showResult("warn", `${ACTIONS[aktion]} …`, ["Befehl wird an Home Assistant gesendet, warte auf Rückmeldung vom Schloss (bis 20 s)."]);
+    let r;
+    try { r = await api("/api/aktion", { aktion }); } catch { r = { ok: false, text: "Keine Verbindung zum Server" }; }
+    busy = false; buttons.forEach((b) => (b.disabled = false));
+    if (r.ok) {
+      const ok = r.reagiert === true || r.reagiert === "True" || r.reagiert === "true";
+      const [nach] = LOCK_STATES[r.nachher] || [r.nachher];
+      showResult(ok ? "ok" : "warn", ok ? `${ACTIONS[aktion]}: ausgeführt` : `${ACTIONS[aktion]}: keine Rückmeldung`, [
+        "✓ Home Assistant hat den Befehl empfangen",
+        ok ? "✓ Nuki hat reagiert" : "✗ Nuki hat innerhalb von 20 s nicht reagiert",
+        `Status jetzt: ${nach || "unbekannt"}`,
+      ]);
+    } else {
+      showResult("err", "Nicht ausgeführt", [r.text || "Unbekannter Fehler"]);
+    }
+    await loadStatus(); loadLog();
+  }
+
+  $("end-session").onclick = async () => {
+    await api("/api/beenden", {});
+    showResult("ok", "Freigabe beendet", ["Die Tür kann erst nach erneuter PIN-Eingabe wieder geöffnet werden."]);
+    await loadStatus(); loadLog();
+  };
+
+  buildKeypad(); renderPin();
+  document.querySelectorAll(".hold").forEach(setupHold);
+  loadStatus(); loadLog();
+  setInterval(renderPanels, 1000);
+  setInterval(() => { if (!document.hidden) loadStatus(); }, 3000);
+  setInterval(() => { if (!document.hidden) loadLog(); }, 20000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) { loadStatus(); loadLog(); } });
+})();
+</script>
+</body>
+</html>
