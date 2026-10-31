@@ -82,7 +82,7 @@
           font: 700 17px/1 inherit; color: #fff; display: flex; align-items: center; justify-content: center; gap: 10px;
           user-select: none; -webkit-user-select: none; touch-action: none; }
   .hold svg { width: 22px; height: 22px; position: relative; } .hold span { position: relative; }
-  .hold.open { background: #b45309; } .hold.lng { background: #1d4ed8; }
+  .hold.open { background: #b45309; } .hold.close { background: #047857; } .hold.lng { background: #1d4ed8; }
   .hold::before { content: ""; position: absolute; inset: 0; background: rgba(255,255,255,.22);
                   transform: scaleX(0); transform-origin: left; }
   .hold.holding::before { transform: scaleX(1); transition: transform 1.2s linear; }
@@ -152,9 +152,9 @@
     </div>
     <div class="bar"><i id="session-bar" style="width:100%"></i></div>
     <div class="actions">
-      <button class="hold open" data-aktion="unlock">
+      <button class="hold open" id="btn-main" data-aktion="unlock">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 7.5-2"/></svg>
-        <span>Tür öffnen</span>
+        <span>Entriegeln</span>
       </button>
       <button class="hold lng" data-aktion="lock_n_go">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3"/><path d="M18 3v4h-4M6 21v-4h4"/></svg>
@@ -194,7 +194,7 @@
     locking: ["Verriegelt …", "moving"], unlocking: ["Entriegelt …", "moving"], jammed: ["Blockiert", "error"],
     unavailable: ["Nicht erreichbar", "error"] };
   const DOOR = { DOOR_CLOSED: "Tür zu", DOOR_OPENED: "Tür offen", DOOR_STATE_UNKNOWN: "Tür unbekannt" };
-  const ACTIONS = { unlock: "Tür öffnen", lock_n_go: "Lock & Go" };
+  const ACTIONS = { unlock: "Entriegeln", lock: "Verriegeln", lock_n_go: "Lock & Go" };
 
   let status = null, statusAt = 0, pin = "", busy = false, maxPin = 4, pinMinutes = 15;
 
@@ -240,6 +240,21 @@
     cb.className = "chip" + (s.battery_critical || pct < 20 ? " warn" : "");
     const cd = $("chip-door");
     cd.hidden = !DOOR[s.door_state]; cd.textContent = DOOR[s.door_state] || "";
+
+    // Hauptknopf: entriegelt → Verriegeln anbieten, sonst Entriegeln (nicht während eine Aktion läuft)
+    const main = $("btn-main");
+    if (!busy) {
+      const offen = ["UNLOCKED", "UNLATCHED", "UNLOCKED_LOCK_N_GO"].includes(s.lock_state) || (!LOCK_STATES[s.lock_state] && ["unlocked", "open"].includes(s.lock));
+      const aktion = offen ? "lock" : "unlock";
+      if (main.dataset.aktion !== aktion) {
+        main.dataset.aktion = aktion;
+        main.className = "hold " + (offen ? "close" : "open");
+        main.querySelector("svg").innerHTML = offen
+          ? '<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>'
+          : '<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 7.5-2"/>';
+        main.querySelector("span").textContent = ACTIONS[aktion];
+      }
+    }
   }
 
   function renderPanels() {

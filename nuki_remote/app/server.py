@@ -234,7 +234,7 @@ async def beenden(request):
 async def aktion(request):
     data = await read_json(request)
     name = data.get("aktion")
-    if name not in ("unlock", "lock_n_go"):
+    if name not in ("unlock", "lock", "lock_n_go"):
         return json_error(400, "Unbekannte Aktion")
     log.info("Aktion %s angefordert von %s", name, client_ip(request))
     try:

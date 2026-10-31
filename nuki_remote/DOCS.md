@@ -14,7 +14,7 @@ Diese Helfer und Skripte müssen existieren. Sie sind bereits angelegt.
 | `input_datetime.nuki_pin_sitzung_bis` | Ende der aktuellen PIN-Sitzung (zentral für alle Geräte) |
 | `input_datetime.nuki_pin_sperre_bis` | Ende der Sperre nach zu vielen Fehlversuchen |
 | `counter.nuki_pin_fehlversuche` | Zähler für falsche PINs |
-| `script.nuki_fern_oeffnen` | Öffnen / Lock 'n' Go, prüft Freigabe + Sitzung selbst |
+| `script.nuki_fern_oeffnen` | Entriegeln / Verriegeln / Lock 'n' Go, prüft Freigabe + Sitzung selbst |
 | `script.nuki_fern_sitzung_starten` / `_beenden` | PIN-Sitzung steuern |
 | `script.nuki_fern_pin_fehlversuch` | Fehlversuch zählen, ggf. sperren und Push senden |
 
@@ -39,7 +39,7 @@ unter `https://<deine-domain>.duckdns.org:8443` erreichbar.
 
 1. Freigabe `input_boolean.nuki_remote_erlaubt` in HA einschalten.
 2. Auf der Webseite PIN eingeben. Die Tür ist dann 15 Minuten lang **für alle Geräte** freigegeben.
-3. „Tür öffnen“ oder „Lock & Go“ gedrückt halten. Die Seite zeigt, ob HA den Befehl empfangen hat
+3. „Entriegeln“ / „Verriegeln“ (je nach Zustand) oder „Lock & Go“ gedrückt halten. Die Seite zeigt, ob HA den Befehl empfangen hat
    und ob Nuki reagiert hat.
 4. Die Freigabe endet automatisch, über „Freigabe jetzt beenden“ oder beim Ausschalten des Schalters.
 
