@@ -21,7 +21,22 @@ log = logging.getLogger("nuki_remote")
 HERE = os.path.dirname(os.path.abspath(__file__))
 OPTIONS_FILE = os.environ.get("OPTIONS_FILE", "/data/options.json")
 HA_URL = os.environ.get("HA_URL", "http://supervisor/core/api")
-HA_TOKEN = os.environ.get("HA_TOKEN") or os.environ.get("SUPERVISOR_TOKEN", "")
+S6_ENV_DIR = "/run/s6/container_environment"
+
+
+def env(name):
+    """Umgebungsvariable lesen; s6-overlay reicht sie nicht immer an CMD weiter, daher auch aus S6_ENV_DIR."""
+    value = os.environ.get(name)
+    if value:
+        return value
+    try:
+        with open(os.path.join(S6_ENV_DIR, name), encoding="utf-8") as f:
+            return f.read().strip()
+    except OSError:
+        return ""
+
+
+HA_TOKEN = os.environ.get("HA_TOKEN") or env("SUPERVISOR_TOKEN")
 PORT = int(os.environ.get("PORT", "8099"))
 
 FREIGABE = "input_boolean.nuki_remote_erlaubt"
