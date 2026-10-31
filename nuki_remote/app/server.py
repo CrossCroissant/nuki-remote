@@ -66,6 +66,24 @@ def load_options():
         return json.load(f)
 
 
+def current_options(app):
+    """Optionen bei jeder PIN-Eingabe neu lesen, damit (De-)Aktivieren ohne Neustart greift."""
+    try:
+        app["options"] = load_options()
+    except (OSError, ValueError) as e:
+        log.warning("Optionen nicht lesbar, nutze letzte bekannte: %s", e)
+    return app["options"]
+
+
+def match_pin(eingabe, pins):
+    """Passenden PIN-Eintrag finden; vergleicht immer alle Einträge (konstante Laufzeit)."""
+    treffer = None
+    for eintrag in pins:
+        if hmac.compare_digest(eingabe.encode(), str(eintrag.get("pin", "")).encode()) and treffer is None:
+            treffer = eintrag
+    return treffer
+
+
 class HA:
     def __init__(self, session: ClientSession):
         self.s = session
@@ -95,8 +113,9 @@ def client_ip(request: web.Request) -> str:
     return request.remote or "?"
 
 
-def quelle(request: web.Request) -> str:
-    return f"Webseite ({client_ip(request)})"
+def quelle(request: web.Request, name: str | None = None) -> str:
+    name = name if name is not None else request.app.get("sitzung_von")
+    return f"{name} – Webseite ({client_ip(request)})" if name else f"Webseite ({client_ip(request)})"
 
 
 def ts_attr(state):
@@ -157,6 +176,7 @@ async def status(request):
         "last_changed": (st.get("lock.nuki") or {}).get("last_changed"),
         "freigabe": freigabe,
         "sitzung_rest": sitzung_rest if freigabe else 0,
+        "sitzung_von": request.app.get("sitzung_von") if freigabe and sitzung_rest > 0 else None,
         "sperre_rest": sperre_rest,
         "fehlversuche": int(float(get("fehlversuche") or 0)) if get("fehlversuche") not in ("unknown", "unavailable") else 0,
         "max_fehlversuche": request.app["options"]["max_fehlversuche"],
@@ -198,6 +218,7 @@ async def pin(request):
 
     data = await read_json(request)
     eingabe = str(data.get("pin", ""))[:32]
+    opts = current_options(request.app)
 
     async with request.app["pin_lock"]:
         st = await ha.states()
@@ -207,18 +228,23 @@ async def pin(request):
         if sperre_rest > 0:
             return json_error(423, "PIN-Eingabe gesperrt", grund="gesperrt", sperre_rest=sperre_rest)
 
-        if hmac.compare_digest(eingabe.encode(), str(opts["pin"]).encode()):
+        treffer = match_pin(eingabe, opts.get("pins") or [])
+        if treffer and treffer.get("aktiv"):
+            name = treffer.get("name") or "Unbenannt"
             res = await ha.script("nuki_fern_sitzung_starten",
-                                  {"minuten": opts["sitzung_minuten"], "quelle": quelle(request)})
-            log.info("PIN korrekt von %s -> %s", ip, res)
+                                  {"minuten": opts["sitzung_minuten"], "quelle": quelle(request, name)})
+            log.info("PIN von %s korrekt (%s) -> %s", name, ip, res)
             if not res.get("ok"):
                 return json_error(403, res.get("text", "Abgelehnt"), grund=res.get("grund"))
-            return web.json_response({"ok": True})
+            request.app["sitzung_von"] = name
+            return web.json_response({"ok": True, "name": name})
 
+        # Deaktivierte PINs verhalten sich nach außen wie falsche, im Logbuch steht aber, wessen PIN es war.
+        hinweis = f"deaktivierte PIN von {treffer.get('name') or 'Unbenannt'}" if treffer else "falsche PIN"
         res = await ha.script("nuki_fern_pin_fehlversuch", {
             "max_versuche": opts["max_fehlversuche"], "sperre_minuten": opts["sperre_minuten"],
-            "quelle": quelle(request)})
-        log.warning("Falsche PIN von %s -> %s", ip, res)
+            "quelle": f"{quelle(request, '')} – {hinweis}"})
+        log.warning("%s von %s -> %s", hinweis, ip, res)
         if res.get("gesperrt"):
             return json_error(423, "Zu viele Fehlversuche – PIN-Eingabe gesperrt", grund="gesperrt",
                               sperre_rest=opts["sperre_minuten"] * 60)
@@ -227,6 +253,7 @@ async def pin(request):
 
 async def beenden(request):
     res = await request.app["ha"].script("nuki_fern_sitzung_beenden", {"quelle": quelle(request)})
+    request.app["sitzung_von"] = None
     log.info("Sitzung beendet von %s", client_ip(request))
     return web.json_response({"ok": bool(res.get("ok"))})
 
@@ -261,6 +288,7 @@ def build_app(options):
     app = web.Application(middlewares=[security_headers], client_max_size=4096)
     app["options"] = options
     app["pin_last"] = {}
+    app["sitzung_von"] = None
     app["pin_lock"] = asyncio.Lock()
     app.on_startup.append(on_startup)
     app.on_cleanup.append(on_cleanup)
@@ -277,6 +305,10 @@ def build_app(options):
 
 def main():
     options = load_options()
+    if options.get("pin"):
+        log.warning("Option 'pin' ist veraltet und wird ignoriert – PINs bitte unter 'pins' pflegen")
+    aktive = [p.get("name") for p in options.get("pins") or [] if p.get("aktiv")]
+    log.info("%d PIN(s) konfiguriert, aktiv: %s", len(options.get("pins") or []), ", ".join(aktive) or "keine")
     if not HA_TOKEN:
         raise SystemExit("Kein Zugriffstoken (SUPERVISOR_TOKEN) vorhanden – homeassistant_api aktiv?")
     ssl_ctx = None

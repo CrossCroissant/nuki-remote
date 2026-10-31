@@ -147,7 +147,7 @@
 
   <section class="card panel" id="p-session" hidden>
     <div class="session-head">
-      <div><h2>Freigabe aktiv</h2><p>Endet automatisch</p></div>
+      <div><h2>Freigabe aktiv</h2><p id="session-von">Endet automatisch</p></div>
       <div class="timer" id="session-timer">--:--</div>
     </div>
     <div class="bar"><i id="session-bar" style="width:100%"></i></div>
@@ -266,6 +266,7 @@
     if (mode === "locked") $("sperre-timer").textContent = fmt(sperre);
     if (mode === "session") {
       $("session-timer").textContent = fmt(sitzung);
+      $("session-von").textContent = s.sitzung_von ? `Freigegeben von ${s.sitzung_von}` : "Endet automatisch";
       $("session-bar").style.width = Math.min(100, (sitzung / (pinMinutes * 60)) * 100) + "%";
     }
     if (mode !== "pin" && pin) { pin = ""; renderPin(); }

@@ -1,5 +1,5 @@
 name: Nuki Remote
-version: "1.1.0"
+version: "1.2.0"
 slug: nuki_remote
 description: Eigenständige Webseite zur geschützten Fernsteuerung der Nuki-Haustür (PIN-Sitzung + zentrale Freigabe)
 url: https://github.com/CrossCroissant/nuki-remote
@@ -18,7 +18,7 @@ ports:
 ports_description:
   8099/tcp: Nuki-Webseite (am Router freigeben)
 options:
-  pin: "1337"
+  pins: []
   sitzung_minuten: 15
   max_fehlversuche: 5
   sperre_minuten: 15
@@ -26,7 +26,11 @@ options:
   certfile: fullchain.pem
   keyfile: privkey.pem
 schema:
-  pin: password
+  pins:
+    - name: str
+      pin: password
+      aktiv: bool
+  pin: password?
   sitzung_minuten: int(1,120)
   max_fehlversuche: int(1,20)
   sperre_minuten: int(1,1440)

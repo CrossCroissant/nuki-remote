@@ -22,12 +22,28 @@ Diese Helfer und Skripte müssen existieren. Sie sind bereits angelegt.
 
 | Option | Standard | Bedeutung |
 |---|---|---|
-| `pin` | `1337` | PIN für die Webseite (wird nur im Add-on geprüft) |
+| `pins` | leer | Liste der PINs, je mit `name`, `pin` und `aktiv` (siehe unten) |
+| `pin` | – | Veraltet, wird ignoriert |
 | `sitzung_minuten` | `15` | Dauer der Freigabe nach korrekter PIN |
 | `max_fehlversuche` | `5` | Falsche PINs bis zur Sperre |
 | `sperre_minuten` | `15` | Dauer der Sperre |
 | `ssl` | `true` | HTTPS mit dem Zertifikat aus `/ssl` (z. B. vom DuckDNS-Add-on) |
 | `certfile` / `keyfile` | `fullchain.pem` / `privkey.pem` | Dateinamen in `/ssl` |
+
+### PINs
+
+Jede Person bekommt einen eigenen PIN. Im Logbuch steht dann, wessen PIN die Freigabe gestartet hat.
+Mit `aktiv: false` ist ein PIN gesperrt. Er wirkt dann wie ein falscher PIN, im Logbuch steht aber,
+wessen deaktivierter PIN probiert wurde. Änderungen gelten ab dem Speichern, ein Neustart ist nicht nötig.
+
+```yaml
+pins:
+  - name: Beispiel
+    pin: "12345678"
+    aktiv: true
+```
+
+PINs immer in Anführungszeichen schreiben, sonst gehen führende Nullen verloren.
 
 ## Erreichbarkeit von außen
 
