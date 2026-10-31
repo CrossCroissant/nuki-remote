@@ -58,6 +58,12 @@ STATUS_ENTITIES = {
     "sperre": SPERRE,
     "fehlversuche": ZAEHLER,
 }
+VIPER = {
+    "weg": "input_boolean.viper_ist_weg",
+    "seit": "input_datetime.viper_draussen_seit",
+    "ausfluege": "counter.viper_ausfluge_heute",
+    "letzter_min": "input_number.viper_letzter_ausflug_minuten",
+}
 MIN_PIN_INTERVAL = 2.0  # Sekunden zwischen PIN-Versuchen pro IP
 
 
@@ -116,6 +122,29 @@ def client_ip(request: web.Request) -> str:
 def quelle(request: web.Request, name: str | None = None) -> str:
     name = name if name is not None else request.app.get("sitzung_von")
     return f"{name} – Webseite ({client_ip(request)})" if name else f"Webseite ({client_ip(request)})"
+
+
+def viper_status(st):
+    """Viper-Status; wird nur während einer gültigen PIN-Sitzung ausgeliefert."""
+    weg = st.get(VIPER["weg"])
+    if not weg:
+        return None
+
+    def zahl(key):
+        try:
+            return int(float(st.get(VIPER[key], {}).get("state")))
+        except (TypeError, ValueError):
+            return None
+
+    seit = ts_attr(st.get(VIPER["seit"]))
+    unterwegs = weg.get("state") == "on"
+    return {
+        "unterwegs": unterwegs,
+        "seit": seit if unterwegs and seit else None,
+        "dauer_s": max(0, int(time.time() - seit)) if unterwegs and seit else None,
+        "ausfluege_heute": zahl("ausfluege"),
+        "letzter_ausflug_min": zahl("letzter_min"),
+    }
 
 
 def ts_attr(state):
@@ -177,6 +206,7 @@ async def status(request):
         "freigabe": freigabe,
         "sitzung_rest": sitzung_rest if freigabe else 0,
         "sitzung_von": request.app.get("sitzung_von") if freigabe and sitzung_rest > 0 else None,
+        "viper": viper_status(st) if freigabe and sitzung_rest > 0 else None,
         "sperre_rest": sperre_rest,
         "fehlversuche": int(float(get("fehlversuche") or 0)) if get("fehlversuche") not in ("unknown", "unavailable") else 0,
         "max_fehlversuche": request.app["options"]["max_fehlversuche"],

@@ -57,6 +57,8 @@
   .notice .ic svg { width: 24px; height: 24px; }
   .notice.off .ic { background: var(--red-soft); color: var(--red); }
   .notice.wait .ic { background: var(--amber-soft); color: var(--amber); }
+  .notice.viper .ic { background: var(--green-soft); color: var(--green); }
+  .notice.viper.out .ic { background: var(--blue-soft); color: var(--blue); }
 
   .pin-dots { display: flex; justify-content: center; gap: 14px; margin: 18px 0 8px; }
   .pin-dots span { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line); transition: .15s; }
@@ -163,6 +165,13 @@
     </div>
     <div class="hint">Zum Auslösen gedrückt halten</div>
     <button class="ghost" id="end-session">Freigabe jetzt beenden</button>
+  </section>
+
+  <section class="card panel" id="p-viper" hidden>
+    <div class="notice viper" id="viper-box">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20c0-6 3-9 8-9s8 3 8 9"/><path d="M6 9 4.5 3.5 9 6.5"/><path d="m18 9 1.5-5.5L15 6.5"/><path d="M9 6.5a7 7 0 0 1 6 0"/></svg></div>
+      <div><h2 id="viper-title">Viper</h2><p id="viper-sub"></p></div>
+    </div>
   </section>
 
   <section class="result" id="result"></section>
@@ -272,6 +281,31 @@
       $("session-bar").style.width = Math.min(100, (sitzung / (pinMinutes * 60)) * 100) + "%";
     }
     if (mode !== "pin" && pin) { pin = ""; renderPin(); }
+    renderViper(mode === "session" ? s.viper : null, e);
+  }
+
+  // Viper-Status (nur während einer gültigen PIN-Sitzung vom Server geliefert)
+  const dauer = (sek) => {
+    const min = Math.floor(sek / 60), h = Math.floor(min / 60);
+    return h ? `${h} Std. ${min % 60} Min.` : `${min} Min.`;
+  };
+  function renderViper(v, e) {
+    $("p-viper").hidden = !v;
+    if (!v) return;
+    $("viper-box").className = "notice viper" + (v.unterwegs ? " out" : "");
+    const teile = [];
+    if (v.unterwegs) {
+      $("viper-title").textContent = "Viper erkundet die Welt";
+      if (v.seit) {
+        const uhr = new Date(v.seit * 1000).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+        teile.push(`seit ${uhr} Uhr · ${dauer(v.dauer_s + e)}`);
+      }
+    } else {
+      $("viper-title").textContent = "Viper ist daheim";
+      if (v.letzter_ausflug_min != null) teile.push(`Letzter Ausflug: ${dauer(v.letzter_ausflug_min * 60)}`);
+    }
+    if (v.ausfluege_heute != null) teile.push(`${v.ausfluege_heute} ${v.ausfluege_heute === 1 ? "Ausflug" : "Ausflüge"} heute`);
+    $("viper-sub").textContent = teile.join(" · ");
   }
 
   async function loadStatus() {
