@@ -197,6 +197,8 @@
   const ACTIONS = { unlock: "Entriegeln", lock: "Verriegeln", lock_n_go: "Lock & Go" };
 
   let status = null, statusAt = 0, pin = "", busy = false, maxPin = 4, pinMinutes = 15;
+  let pending = null; // Befehl, auf den Nuki nach 20 s noch nicht reagiert hat: { aktion, vorher, since }
+  const PENDING_MAX = 5 * 60 * 1000;
 
   const fmt = (s) => { s = Math.max(0, Math.round(s)); return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`; };
   const ago = (iso) => {
@@ -278,8 +280,26 @@
       if (!s.ok) throw new Error(s.text);
       status = s; statusAt = Date.now(); setConn(true);
       if (s.sitzung_rest > pinMinutes * 60) pinMinutes = Math.ceil(s.sitzung_rest / 60);
-      renderHero(s); renderPanels();
+      renderHero(s); renderPanels(); checkPending(s);
     } catch { setConn(false); }
+  }
+
+  function checkPending(s) {
+    if (!pending) return;
+    const [nach, cls] = LOCK_STATES[s.lock_state] || [s.lock_state, ""];
+    const sek = Math.round((Date.now() - pending.since) / 1000);
+    if (s.lock_state !== pending.vorher && cls !== "moving") {
+      showResult("warn", `${ACTIONS[pending.aktion]}: verspätet ausgeführt`, [
+        `⚠ Nuki hat erst nach ca. ${sek} s reagiert`, `Status jetzt: ${nach}`]);
+      pending = null; loadLog();
+    } else if (Date.now() - pending.since > PENDING_MAX) {
+      showResult("err", `${ACTIONS[pending.aktion]}: keine Reaktion`, [
+        "✗ Nuki hat seit 5 Minuten nicht reagiert",
+        "Der Befehl hängt in der Bluetooth-Verbindung und könnte trotzdem noch ausgeführt werden."]);
+      pending = null; loadLog();
+    } else {
+      $("pending-time").textContent = fmt(sek);
+    }
   }
 
   async function loadLog() {
@@ -374,18 +394,27 @@
     busy = true;
     const buttons = document.querySelectorAll(".hold");
     buttons.forEach((b) => (b.disabled = true));
+    pending = null;
     showResult("warn", `${ACTIONS[aktion]} …`, ["Befehl wird an Home Assistant gesendet, warte auf Rückmeldung vom Schloss (bis 20 s)."]);
     let r;
     try { r = await api("/api/aktion", { aktion }); } catch { r = { ok: false, text: "Keine Verbindung zum Server" }; }
     busy = false; buttons.forEach((b) => (b.disabled = false));
-    if (r.ok) {
-      const ok = r.reagiert === true || r.reagiert === "True" || r.reagiert === "true";
+    const istWahr = (v) => v === true || v === "True" || v === "true";
+    if (r.ok && istWahr(r.reagiert)) {
+      pending = null;
       const [nach] = LOCK_STATES[r.nachher] || [r.nachher];
-      showResult(ok ? "ok" : "warn", ok ? `${ACTIONS[aktion]}: ausgeführt` : `${ACTIONS[aktion]}: keine Rückmeldung`, [
+      showResult("ok", `${ACTIONS[aktion]}: ausgeführt`, [
+        "✓ Home Assistant hat den Befehl empfangen", "✓ Nuki hat reagiert", `Status jetzt: ${nach || "unbekannt"}`]);
+    } else if (r.ok) {
+      // Befehl läuft weiter; die Seite beobachtet den Status, HA warnt per Push bei verspäteter Ausführung.
+      pending = { aktion, vorher: r.vorher, since: Date.now() - 20000 };
+      showResult("warn", `${ACTIONS[aktion]}: Schloss reagiert noch nicht`, [
         "✓ Home Assistant hat den Befehl empfangen",
-        ok ? "✓ Nuki hat reagiert" : "✗ Nuki hat innerhalb von 20 s nicht reagiert",
-        `Status jetzt: ${nach || "unbekannt"}`,
-      ]);
+        "… Befehl ist unterwegs zur Nuki (Bluetooth), wird nicht verworfen",
+        "Wartet seit ", "Du bekommst eine Push-Nachricht, sobald das Schloss reagiert."]);
+      const li = $("result").querySelectorAll("li")[2];
+      const t = document.createElement("b"); t.id = "pending-time"; t.style.display = "inline";
+      t.textContent = fmt(20); li.append(t);
     } else {
       showResult("err", "Nicht ausgeführt", [r.text || "Unbekannter Fehler"]);
     }

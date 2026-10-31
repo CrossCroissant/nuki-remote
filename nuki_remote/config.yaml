@@ -1,5 +1,5 @@
 name: Nuki Remote
-version: "1.2.0"
+version: "1.3.0"
 slug: nuki_remote
 description: Eigenständige Webseite zur geschützten Fernsteuerung der Nuki-Haustür (PIN-Sitzung + zentrale Freigabe)
 url: https://github.com/CrossCroissant/nuki-remote
